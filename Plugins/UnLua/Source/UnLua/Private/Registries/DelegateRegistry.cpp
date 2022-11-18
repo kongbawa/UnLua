@@ -61,11 +61,15 @@ namespace UnLua
         TArray<FLuaDelegatePair> ToRemove;
         for (auto& Pair : CachedHandlers)
         {
-            if (Pair.Key.SelfObject.IsStale())
+            // begin modify by zuokun
+            // 由于已经允许 Delegate 绑定 LuaTable, SelfObject 有可能是空的
+            // 当 Delegate 已经被释放后，主动清除 DelegateHandler
+            if (Pair.Key.SelfObject.IsStale() || Pair.Value.IsStale() || Pair.Value->SelfObject.IsStale()|| !Pair.Value->DelegateOwner.IsValid())
             {
                 ToRemove.Add(Pair.Key);
                 Env->AutoObjectReference.Remove(Pair.Value.Get());
             }
+
         }
 
         for (auto& Key : ToRemove)
@@ -157,7 +161,11 @@ namespace UnLua
         for (const auto& Handler : Info->Handlers)
         {
             if (!Handler.IsValid())
+            {
                 continue;
+            }
+            // modify by zuokun lua 解绑后先删除引用 handler 删除时可能 lua table 已经垃圾回收了
+            NotifyHandlerBeginDestroy(Handler.Get());
             if (!Info->Owner.IsStale())
                 ((FScriptDelegate*)Delegate)->Unbind();
         }
@@ -219,17 +227,26 @@ namespace UnLua
 
     void FDelegateRegistry::Remove(lua_State* L, UObject* SelfObject, void* Delegate, int Index)
     {
+        // modify by ken 不需要check
+        const auto Info = Delegates.Find(Delegate);
+        if (!Info)
+            return;
+
         check(lua_type(L, Index) == LUA_TFUNCTION);
         const auto LuaFunction = lua_topointer(L, Index);
-        auto& Info = Delegates.FindChecked(Delegate);
+        //auto& Info = Delegates.FindChecked(Delegate);
 
         const auto DelegatePair = FLuaDelegatePair(SelfObject, LuaFunction);
         const auto Cached = CachedHandlers.Find(DelegatePair);
         if (!Cached || !Cached->IsValid())
             return;
 
-        (*Cached)->RemoveFrom(Info.MulticastProperty, Delegate);
-        Info.Handlers.Remove(*Cached);
+        (*Cached)->RemoveFrom(Info->MulticastProperty, Delegate);
+
+        // modify by zuokun lua 解绑后先删除引用 handler 删除时可能 lua table 已经垃圾回收了
+        NotifyHandlerBeginDestroy(Cached->Get());
+
+        Info->Handlers.Remove(*Cached);
     }
 
     void FDelegateRegistry::Broadcast(lua_State* L, void* Delegate, int32 NumParams, int32 FirstParamIndex)
@@ -254,7 +271,10 @@ namespace UnLua
             if (!Handler.IsValid())
                 continue;
             if (Info->Owner.IsValid())
+            {
                 Handler->RemoveFrom(Info->MulticastProperty, Delegate);
+                NotifyHandlerBeginDestroy(Handler.Get());
+            }
         }
 
         Info->Handlers.Empty();
@@ -277,7 +297,40 @@ namespace UnLua
         const auto Ret = NewObject<ULuaDelegateHandler>();
         Ret->Registry = this;
         Ret->LuaRef = LuaRef;
-        Ret->SelfObject = SelfObject ? SelfObject : Owner;
+        //Ret->SelfObject = SelfObject ? SelfObject : Owner;
+        Ret->SelfObject = SelfObject;
+        // modify by zuokun 由于改为可以绑定lua table 导致 DelegateHandler 没有持有者为了不被垃圾回收将Delegate 的 Owner 做为临时持有者 
+        // 当Unbind 时会 NotifyHandlerBeginDestroy 把 DelegateOwner 清空允许垃圾回收
+        Ret->DelegateOwner = Owner;
         return Ret;
     }
+	
+    // 增加一个主动清除Handler 的函数，主要是为了 类似 K2_SetTimerDelegate 参数 是 Delegate 的
+    // Unlua DelegateHandler 的生命周期是跟着Object 走的。由于我们允许Delegate绑定到 LuaTable 上
+    // 这种没办法解绑，只能通过这种方式解绑
+    void FDelegateRegistry::RemoveDelegateHandler(UObject* SelfObject, const void* InLuaFunction)
+    {
+        const auto LuaFunction2 = FLuaDelegatePair(SelfObject, InLuaFunction);
+        const auto Cached = CachedHandlers.Find(LuaFunction2);
+        if (!Cached || !Cached->IsValid())
+            return;
+        void* Delegate = Cached->Get()->Delegate;
+        const auto Info = Delegates.Find(Delegate);
+        if (Info)
+        {
+            if (Info->bIsMulticast)
+            {
+                Cached->Get()->RemoveFrom(Info->MulticastProperty, Delegate);
+            }
+            else
+            {
+                ((FScriptDelegate*)Delegate)->Unbind();
+            }
+        }
+        
+        NotifyHandlerBeginDestroy(Cached->Get());
+
+        Env->AutoObjectReference.Remove(Cached->Get());
+        CachedHandlers.Remove(LuaFunction2);
+    }	
 }

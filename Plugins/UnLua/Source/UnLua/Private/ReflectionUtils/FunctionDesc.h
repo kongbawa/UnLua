@@ -119,7 +119,7 @@ private:
     void* PreCall(lua_State* L, int32 NumParams, int32 FirstParamIndex, FFlagArray& CleanupFlags, void* Userdata = nullptr);
     int32 PostCall(lua_State* L, int32 NumParams, int32 FirstParamIndex, void* Params, const FFlagArray& CleanupFlags);
 
-    bool CallLuaInternal(lua_State *L, void *InParams, FOutParmRec *OutParams, void *RetValueAddress) const;
+    bool CallLuaInternal(lua_State *L, void *InParams, FOutParmRec *OutParams, void *RetValueAddress, bool HasUObject = true) const;
 
     TWeakObjectPtr<UFunction> Function;
     FString FuncName;

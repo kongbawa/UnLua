@@ -50,7 +50,7 @@ namespace UnLua
 {
     class FLuaEnv;
 
-    class FDelegateRegistry
+    class UNLUA_API FDelegateRegistry
     {
     public:
         explicit FDelegateRegistry(FLuaEnv* Env);
@@ -79,6 +79,7 @@ namespace UnLua
 
         void NotifyHandlerBeginDestroy(ULuaDelegateHandler* Handler);
 
+		void RemoveDelegateHandler(UObject* SelfObject, const void* InLuaFunction);
     private:
         TSharedPtr<FFunctionDesc> GetSignatureDesc(const void* Delegate);
 

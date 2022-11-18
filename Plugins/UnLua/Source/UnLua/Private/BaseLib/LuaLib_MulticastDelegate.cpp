@@ -30,8 +30,10 @@ static const char* GetMulticastDelegateInfo(lua_State* L, T* & Delegate, UObject
         return "invalid multicast delegate";
 
     Object = UnLua::GetUObject(L, 2);
-    if (!Object)
-        return "invalid object";
+    // begin modify by zuokun
+    // enable bind luatable
+    //if (!Object)
+    //    return "invalid object";
 
     CallbackFunction = lua_topointer(L, 3);
     if (!CallbackFunction)

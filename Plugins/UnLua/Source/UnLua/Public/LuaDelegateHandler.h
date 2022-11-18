@@ -53,6 +53,8 @@ public:
 private:
     TWeakObjectPtr<UObject> SelfObject;
     UnLua::FDelegateRegistry* Registry;
+    TWeakObjectPtr<UObject> DelegateOwner;
+
     int32 LuaRef;
     void* Delegate;
 };

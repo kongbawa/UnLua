@@ -17,7 +17,7 @@
 #include "CoreUObject.h"
 #include "lua.hpp"
 
-struct FLuaDynamicBinding
+struct UNLUA_API FLuaDynamicBinding
 {
     FLuaDynamicBinding()
         : Class(nullptr), InitializerTableRef(LUA_NOREF)
@@ -42,11 +42,11 @@ struct FLuaDynamicBinding
     int32 Pop();
 };
 
-extern FLuaDynamicBinding GLuaDynamicBinding;
+extern UNLUA_API FLuaDynamicBinding GLuaDynamicBinding;
 
 struct lua_State;
 
-class FScopedLuaDynamicBinding
+class UNLUA_API FScopedLuaDynamicBinding
 {
 public:
     FScopedLuaDynamicBinding(lua_State *InL, UClass *Class, const TCHAR *ModuleName, int32 InitializerTableRef);

@@ -68,6 +68,7 @@ void ULuaDelegateHandler::Reset()
     LuaRef = LUA_NOREF;
     Registry = nullptr;
     Delegate = nullptr;
+    DelegateOwner = nullptr;
 }
 
 void ULuaDelegateHandler::ProcessEvent(UFunction* Function, void* Parms)

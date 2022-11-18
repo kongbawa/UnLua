@@ -856,7 +856,10 @@ int32 GetDelegateInfo(lua_State *L, int32 Index, UObject* &Object, const void* &
         }
         lua_pop(L, 1);
     }
-    return !Object || !Function ? INDEX_NONE : FuncIdxInTable;
+    // begin modify by zuokun
+    // enable luatable bind delegate
+    //return !Object || !Function ? INDEX_NONE : FuncIdxInTable;
+    return !Function ? INDEX_NONE : FuncIdxInTable;
 }
 
 /**
@@ -938,8 +941,9 @@ bool PushFunction(lua_State *L, UObjectBaseUtility *Object, int32 FunctionRef)
     lua_pushcfunction(L, UnLua::ReportLuaCallError);
     int32 Type = lua_rawgeti(L, LUA_REGISTRYINDEX, FunctionRef);
     if (Type == LUA_TFUNCTION)
-    {
-        UnLua::PushUObject(L, Object);
+    {   
+        if(Object)
+            UnLua::PushUObject(L, Object);
         return true;
     }
     if (int32 NumToPop = lua_gettop(L) - N)

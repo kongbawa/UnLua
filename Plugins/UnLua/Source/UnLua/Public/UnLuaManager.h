@@ -38,6 +38,8 @@ public:
 
     bool Bind(UObject *Object, const TCHAR *InModuleName, int32 InitializerTableRef = LUA_NOREF);
 
+    void OnWorldCleanup(UWorld* World, bool bArg, bool bCond);
+
     void NotifyUObjectDeleted(const UObjectBase *Object);
 
     void Cleanup();
@@ -79,6 +81,10 @@ public:
     UFUNCTION(BlueprintImplementableEvent)
     void TriggerAnimNotify();
 
+    FString MakeModuleName(const TCHAR* ModuleName);
+
+    void OnWorldChanged(UWorld* OldWorld, UWorld* NewWorld);
+
 private:
     /* 将一个UClass绑定到Lua模块，根据这个模块定义的函数列表来覆盖上面的UFunction */
     bool BindClass(UClass *Class, const FString &InModuleName, FString &Error);
@@ -112,4 +118,6 @@ private:
     UFunction *InputVectorAxisFunc;
     UFunction *InputGestureFunc;
     UFunction *AnimNotifyFunc;
+
+    TWeakObjectPtr<UObject> CurrentWorld;
 };

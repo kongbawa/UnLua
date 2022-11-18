@@ -237,7 +237,7 @@ bool FFunctionDesc::CallLua(lua_State* L, int32 LuaRef, void* Params, UObject* S
 
     const bool bHasReturnParam = Function->ReturnValueOffset != MAX_uint16;
     uint8* ReturnValueAddress = bHasReturnParam ? ((uint8*)Params + Function->ReturnValueOffset) : nullptr;
-    bOk = CallLuaInternal(L, Params, nullptr, ReturnValueAddress);
+    bOk = CallLuaInternal(L, Params, nullptr, ReturnValueAddress, Self != nullptr);
     return bOk;
 }
 
@@ -563,7 +563,7 @@ static FOutParmRec* FindOutParmRec(FOutParmRec *OutParam, FProperty *OutProperty
 /**
  * Call Lua function that overrides this UFunction. 
  */
-bool FFunctionDesc::CallLuaInternal(lua_State *L, void *InParams, FOutParmRec *OutParams, void *RetValueAddress) const
+bool FFunctionDesc::CallLuaInternal(lua_State *L, void *InParams, FOutParmRec *OutParams, void *RetValueAddress, bool HasUObject) const
 {
     // -1 = [table/userdata] UObject for self
     // -2 = [function] to call
@@ -589,7 +589,8 @@ bool FFunctionDesc::CallLuaInternal(lua_State *L, void *InParams, FOutParmRec *O
     int32 NumResult = OutPropertyIndices.Num();
     if (ReturnPropertyIndex == INDEX_NONE)
     {
-        NumParams++;
+        if(HasUObject)
+            NumParams++;
     }
     else
     {

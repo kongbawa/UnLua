@@ -269,7 +269,9 @@ namespace UnLua
 
     void FClassRegistry::Cleanup()
     {
-        for (const auto Pair : Name2Classes)
+        // modify by ken 
+        // Name2Classes 中可能会有多个Name对应同一个Class 问题 
+        for (const auto Pair : Classes)
             delete Pair.Value;
         Name2Classes.Empty();
         Classes.Empty();
@@ -300,7 +302,18 @@ namespace UnLua
     FClassDesc* FClassRegistry::RegisterInternal(UStruct* Type, const FString& Name)
     {
         check(Type);
-        check(!Classes.Contains(Type));
+        // modify by ken 
+        // 解决 Editor 下 ULuaEnvLocator_ByGameInstance 切图时报错问题 
+#if WITH_EDITOR
+        FClassDesc** ClassDescFind = Classes.Find(Type);
+        if (ClassDescFind)
+        {
+            Name2Classes.Add(FName(*Name), *ClassDescFind);
+            return *ClassDescFind;
+        }
+#else 
+        check(!Classes.Find(Type));
+#endif 
 
         FClassDesc* ClassDesc = new FClassDesc(Type, Name);
         Classes.Add(Type, ClassDesc);

@@ -444,12 +444,38 @@ UnLua::AddType(#Name, UnLua::GetTypeInterface<Type>()); \
         UnLua::IExportedClass *ExportedClass; \
     };
 
+#define EXPORT_UNTYPED_CLASS_EX(Name, Suffix, bIsReflected, Lib) \
+    struct FExported##Name##Suffix##Helper \
+    { \
+        static FExported##Name##Suffix##Helper StaticInstance; \
+        FExported##Name##Suffix##Helper() \
+            : ExportedClass(nullptr) \
+        { \
+            UnLua::IExportedClass *Class = UnLua::FindExportedClass(#Name); \
+            if (!Class) \
+            { \
+                ExportedClass = new UnLua::TExportedClassBase<bIsReflected>(#Name); \
+                UnLua::ExportClass(ExportedClass); \
+                Class = ExportedClass; \
+            } \
+            Class->AddLib(Lib); \
+        } \
+        ~FExported##Name##Suffix##Helper() \
+        { \
+            delete ExportedClass; \
+        } \
+        UnLua::IExportedClass *ExportedClass; \
+    };
+
 #define BEGIN_EXPORT_CLASS(Type, ...) \
     BEGIN_EXPORT_NAMED_CLASS(Type, Type, ##__VA_ARGS__)
 
 #define BEGIN_EXPORT_NAMED_CLASS(Name, Type, ...) \
     DEFINE_NAMED_TYPE(#Name, Type) \
     BEGIN_EXPORT_CLASS_EX(false, Name, , Type, nullptr, ##__VA_ARGS__)
+
+#define BEGIN_EXPORT_CLASS_SUFFIX(Type, Suffix, ...) \
+    BEGIN_EXPORT_CLASS_EX(false, Type, Suffix, Type, nullptr, ##__VA_ARGS__)
 
 #define BEGIN_EXPORT_REFLECTED_CLASS(Type, ...) \
     BEGIN_EXPORT_CLASS_EX(true, Type, , Type, nullptr, ##__VA_ARGS__)
@@ -577,6 +603,16 @@ UnLua::AddType(#Name, UnLua::GetTypeInterface<Type>()); \
     { \
         typedef Enum EnumType; \
         FExported##Enum(const FString &InName) \
+            : UnLua::FExportedEnum(InName) \
+        { \
+            UnLua::ExportEnum(this);
+
+#define BEGIN_EXPORT_ENUM_EX(Enum, Name) \
+    DEFINE_NAMED_TYPE(#Name, Enum) \
+    static struct FExported##Name : public UnLua::FExportedEnum \
+    { \
+        typedef Enum EnumType; \
+        FExported##Name(const FString &InName) \
             : UnLua::FExportedEnum(InName) \
         { \
             UnLua::ExportEnum(this);

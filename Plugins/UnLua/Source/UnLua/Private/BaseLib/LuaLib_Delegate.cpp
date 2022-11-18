@@ -29,8 +29,10 @@ static int32 FScriptDelegate_Bind(lua_State* L)
         return luaL_error(L, "invalid dynamic delegate");
 
     UObject* Object = UnLua::GetUObject(L, 2);
-    if (!Object)
-        return luaL_error(L, "invalid object");
+    // begin modify by zuokun
+    // enable bind luatable
+    //if (!Object)
+    //    return luaL_error(L, "invalid object");
 
     if (lua_type(L, 3) != LUA_TFUNCTION)
         return luaL_error(L, "invalid function");

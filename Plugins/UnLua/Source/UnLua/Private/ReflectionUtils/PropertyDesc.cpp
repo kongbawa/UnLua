@@ -1323,7 +1323,9 @@ public:
 
         const void* ValuePtr = Property->ContainerPtrToValuePtr<void>(ContainerPtr);
         FScriptDelegate* ScriptDelegate = (FScriptDelegate*)DelegateProperty->GetPropertyValuePtr(ValuePtr);
-        UnLua::FLuaEnv::FindEnvChecked(L).GetDelegateRegistry()->Register(ScriptDelegate, DelegateProperty, ScriptDelegate->GetUObject());
+       // begin modify by zuokun
+        // Owner Ó¦¸Ã¸ú×Å Delegate µÄ Owner
+        UnLua::FLuaEnv::FindEnvChecked(L).GetDelegateRegistry()->Register(ScriptDelegate, DelegateProperty, DelegateProperty->GetOwnerUObject());
         GetValueInternal(L, ScriptDelegate, bCreateCopy);
     }
 
@@ -1343,7 +1345,9 @@ public:
 
         void* ValuePtr = Property->ContainerPtrToValuePtr<void>(ContainerPtr);
         FScriptDelegate* ScriptDelegate = DelegateProperty->GetPropertyValuePtr(ValuePtr);
-        UnLua::FLuaEnv::FindEnvChecked(L).GetDelegateRegistry()->Register(ScriptDelegate, DelegateProperty, ScriptDelegate->GetUObject());
+        // begin modify by zuokun
+        // Owner Ó¦¸Ã¸ú×Å Delegate µÄ Owner
+        UnLua::FLuaEnv::FindEnvChecked(L).GetDelegateRegistry()->Register(ScriptDelegate, DelegateProperty, DelegateProperty->GetOwnerUObject());
         return SetValueInternal(L, ValuePtr, IndexInStack, bCopyValue);
     }
     

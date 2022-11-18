@@ -25,7 +25,9 @@
 #include "LuaCore.h"
 #include "LuaFunction.h"
 #include "ObjectReferencer.h"
-
+#include "Kismet/KismetSystemLibrary.h"
+#include "LuaSearcherManager.h"
+#include "LuaPathSearcher.h"
 
 static const TCHAR* SReadableInputEvent[] = { TEXT("Pressed"), TEXT("Released"), TEXT("Repeat"), TEXT("DoubleClick"), TEXT("Axis"), TEXT("Max") };
 
@@ -50,6 +52,48 @@ UUnLuaManager::UUnLuaManager()
     AnimNotifyFunc = Class->FindFunctionByName(FName("TriggerAnimNotify"));
 }
 
+// modify by zuokun 
+
+void UUnLuaManager::OnWorldChanged(UWorld* OldWorld, UWorld* NewWorld)
+{
+    CurrentWorld = NewWorld;
+}
+
+// 服务器和客户端动态绑定不同的Lua
+FString UUnLuaManager::MakeModuleName(const TCHAR* ModuleName)
+{
+    auto LuaSearcherManager = FLuaSearcherManager::Get();
+
+    if (!LuaSearcherManager)
+        return ModuleName;
+
+    auto LuaSearcher = LuaSearcherManager->GetPathSearcher();
+
+    if (!LuaSearcher)
+        return ModuleName;
+
+    FString FileName = ModuleName;
+    if (!FileName.EndsWith(TEXT("_S")) && !FileName.EndsWith(TEXT("_C")))
+    {
+        FString RelativePath = FileName;
+         
+        if (CurrentWorld.IsValid() && UKismetSystemLibrary::IsDedicatedServer(CurrentWorld.Get()))
+        {
+            RelativePath.Append(TEXT("_S"));
+        }
+        else
+        {
+            RelativePath.Append(TEXT("_C"));
+        }
+            
+        if (LuaSearcher->IsFileExisted(RelativePath))
+        {
+            FileName = RelativePath;
+        }
+    }
+    return FileName;
+}
+
 /**
  * Bind a Lua module for a UObject
  */
@@ -62,9 +106,9 @@ bool UUnLuaManager::Bind(UObject *Object, const TCHAR *InModuleName, int32 Initi
 
     if (!Env->GetClassRegistry()->Register(Class))
         return false;
-
+    FString ModuleName = MakeModuleName(InModuleName);
     // try bind lua if not bind or use a copyed table
-    UnLua::FLuaRetValues RetValues = UnLua::Call(L, "require", TCHAR_TO_UTF8(InModuleName));
+    UnLua::FLuaRetValues RetValues = UnLua::Call(L, "require", TCHAR_TO_UTF8(*ModuleName));
     FString Error;
     if (!RetValues.IsValid() || RetValues.Num() == 0)
     {
@@ -80,12 +124,12 @@ bool UUnLuaManager::Bind(UObject *Object, const TCHAR *InModuleName, int32 Initi
     }
     else
     {
-        BindClass(Class, InModuleName, Error);
+        BindClass(Class, ModuleName, Error);
     }
 
     if (!Error.IsEmpty())
     {
-        UE_LOG(LogUnLua, Warning, TEXT("Failed to attach %s module for object %s,%p!\n%s"), InModuleName, *Object->GetName(), Object, *Error);
+        UE_LOG(LogUnLua, Warning, TEXT("Failed to attach %s module for object %s,%p!\n%s"), *ModuleName, *Object->GetName(), Object, *Error);
         return false;
     }
 
